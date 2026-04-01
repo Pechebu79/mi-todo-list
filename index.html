@@ -1,1 +1,125 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi To-Do List</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f0; min-height: 100vh; padding: 2rem 1rem; color: #1a1a1a; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem; text-align: center; }
+
+    .input-row { display: flex; gap: 8px; margin-bottom: 2rem; max-width: 600px; margin-inline: auto; }
+    .input-row input { flex: 1; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fff; }
+    .input-row input:focus { outline: 2px solid #7F77DD; border-color: transparent; }
+    .input-row button { padding: 10px 18px; background: #7F77DD; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    .input-row button:hover { background: #534AB7; }
+
+    .columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 900px; margin-inline: auto; }
+    .column { background: #fff; border-radius: 12px; border: 1px solid #e5e5e0; padding: 1rem; min-height: 300px; }
+    .column h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #888; margin-bottom: 12px; }
+
+    .task { background: #f9f9f7; border: 1px solid #e5e5e0; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .task span { flex: 1; line-height: 1.4; word-break: break-word; }
+    .task-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .task-actions button { font-size: 11px; padding: 3px 7px; border-radius: 5px; border: 1px solid #ddd; background: #fff; cursor: pointer; color: #555; }
+    .task-actions button:hover { background: #f0f0ee; }
+    .task-actions button.del { color: #c0392b; border-color: #f5c6c6; }
+    .task-actions button.del:hover { background: #fff0f0; }
+
+    .col-todo h2 { color: #888; }
+    .col-progress h2 { color: #BA7517; }
+    .col-done h2 { color: #3B6D11; }
+    .col-progress { border-top: 3px solid #EF9F27; }
+    .col-done { border-top: 3px solid #639922; }
+    .col-todo { border-top: 3px solid #AFA9EC; }
+
+    @media (max-width: 600px) { .columns { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<h1>Mi To-Do List</h1>
+
+<div class="input-row">
+  <input type="text" id="nueva-tarea" placeholder="Escribe una tarea nueva…" />
+  <button onclick="agregarTarea()">Agregar</button>
+</div>
+
+<div class="columns">
+  <div class="column col-todo">
+    <h2>Por hacer</h2>
+    <div id="col-todo"></div>
+  </div>
+  <div class="column col-progress">
+    <h2>En progreso</h2>
+    <div id="col-progress"></div>
+  </div>
+  <div class="column col-done">
+    <h2>Hecho</h2>
+    <div id="col-done"></div>
+  </div>
+</div>
+
+<script>
+  const COLS = ['todo', 'progress', 'done'];
+  const LABELS = { todo: 'Por hacer', progress: 'En progreso', done: 'Hecho' };
+
+  function cargar() {
+    return JSON.parse(localStorage.getItem('tareas') || '[]');
+  }
+
+  function guardar(tareas) {
+    localStorage.setItem('tareas', JSON.stringify(tareas));
+  }
+
+  function render() {
+    const tareas = cargar();
+    COLS.forEach(col => {
+      const contenedor = document.getElementById('col-' + col);
+      contenedor.innerHTML = '';
+      tareas.filter(t => t.estado === col).forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'task';
+        const acciones = COLS.filter(c => c !== t.estado)
+          .map(c => `<button onclick="mover('${t.id}','${c}')">${LABELS[c]}</button>`)
+          .join('');
+        div.innerHTML = `<span>${t.texto}</span><div class="task-actions">${acciones}<button class="del" onclick="eliminar('${t.id}')">✕</button></div>`;
+        contenedor.appendChild(div);
+      });
+    });
+  }
+
+  function agregarTarea() {
+    const input = document.getElementById('nueva-tarea');
+    const texto = input.value.trim();
+    if (!texto) return;
+    const tareas = cargar();
+    tareas.push({ id: Date.now().toString(), texto, estado: 'todo' });
+    guardar(tareas);
+    input.value = '';
+    render();
+  }
+
+  function mover(id, nuevoEstado) {
+    const tareas = cargar();
+    const t = tareas.find(t => t.id === id);
+    if (t) t.estado = nuevoEstado;
+    guardar(tareas);
+    render();
+  }
+
+  function eliminar(id) {
+    guardar(cargar().filter(t => t.id !== id));
+    render();
+  }
+
+  document.getElementById('nueva-tarea').addEventListener('keydown', e => {
+    if (e.key === 'Enter') agregarTarea();
+  });
+
+  render();
+</script>
+</body>
+</html>
