@@ -1,5 +1,24 @@
 
-<!DOCTYPE html>
+Una vez que lo guardes en GitHub, cuando termines presiona el botón para continuar con el Paso 3: conectar GitHub con Vercel y publicar la página.Ya guardé el index.html en GitHub. ¿Qué sigue?5:51 p. m.Perfecto. Ahora vamos a publicar tu página conectando GitHub con Vercel. Este es el paso donde tu to-do list se vuelve accesible desde cualquier navegador con un link real.
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.25s;
+    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  }
+VvisualizeVvisualize show_widgetLo más importante de este paso: al registrarte en Vercel con tu cuenta de GitHub, los dos servicios quedan enlazados permanentemente. Eso significa que cada vez que guardes un cambio en GitHub, Vercel publica la nueva versión de tu página en segundos — sin que tengas que hacer nada más.
+Cuando tengas tu link de Vercel funcionando, presiona el botón para continuar. El siguiente paso será conectar el agente de Telegram en Railway.Ya publiqué mi to-do list en Vercel y funciona. ¿Qué sigue?5:55 p. m.¡Excelente! Ya tienes tu to-do list publicada en internet. Antes de meternos con Railway y Telegram, necesitamos hacer un pequeño ajuste técnico: exponer una pequeña "puerta trasera" en tu página web para que el agente de Telegram pueda leer y escribir tareas.
+Esto se llama una API. Vamos paso a paso.
+Primero, ¿qué vamos a hacer en este paso?
+Modificar tu index.html para que exponga funciones globales (agregarTarea, obtenerTareas) que el agente de Telegram pueda llamar desde fuera. Sin esto, el bot no tendría forma de interactuar con tu lista.
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.25s;
+    animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  }
+VvisualizeVvisualize show_widgetAquí está el código actualizado. Reemplaza todo el contenido de tu index.html con esto:
+html<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -28,12 +47,9 @@
     .task-actions button.del { color: #c0392b; border-color: #f5c6c6; }
     .task-actions button.del:hover { background: #fff0f0; }
 
-    .col-todo h2 { color: #888; }
-    .col-progress h2 { color: #BA7517; }
-    .col-done h2 { color: #3B6D11; }
+    .col-todo { border-top: 3px solid #AFA9EC; }
     .col-progress { border-top: 3px solid #EF9F27; }
     .col-done { border-top: 3px solid #639922; }
-    .col-todo { border-top: 3px solid #AFA9EC; }
 
     @media (max-width: 600px) { .columns { grid-template-columns: 1fr; } }
   </style>
@@ -44,7 +60,7 @@
 
 <div class="input-row">
   <input type="text" id="nueva-tarea" placeholder="Escribe una tarea nueva…" />
-  <button onclick="agregarTarea()">Agregar</button>
+  <button onclick="agregarTareaNueva()">Agregar</button>
 </div>
 
 <div class="columns">
@@ -91,15 +107,12 @@
     });
   }
 
-  function agregarTarea() {
+  function agregarTareaNueva() {
     const input = document.getElementById('nueva-tarea');
     const texto = input.value.trim();
     if (!texto) return;
-    const tareas = cargar();
-    tareas.push({ id: Date.now().toString(), texto, estado: 'todo' });
-    guardar(tareas);
+    agregarTarea(texto);
     input.value = '';
-    render();
   }
 
   function mover(id, nuevoEstado) {
@@ -116,10 +129,48 @@
   }
 
   document.getElementById('nueva-tarea').addEventListener('keydown', e => {
-    if (e.key === 'Enter') agregarTarea();
+    if (e.key === 'Enter') agregarTareaNueva();
   });
+
+  // ── API pública para el agente de Telegram ──────────────────────
+  window.todoAPI = {
+    obtenerTareas: function() {
+      return cargar();
+    },
+    agregarTarea: function(texto) {
+      const tareas = cargar();
+      const nueva = { id: Date.now().toString(), texto, estado: 'todo' };
+      tareas.push(nueva);
+      guardar(tareas);
+      render();
+      return nueva;
+    },
+    moverTarea: function(id, nuevoEstado) {
+      const tareas = cargar();
+      const t = tareas.find(t => t.id === id);
+      if (!t) return false;
+      t.estado = nuevoEstado;
+      guardar(tareas);
+      render();
+      return true;
+    },
+    eliminarTarea: function(id) {
+      const antes = cargar().length;
+      guardar(cargar().filter(t => t.id !== id));
+      render();
+      return cargar().length < antes;
+    }
+  };
+  // ────────────────────────────────────────────────────────────────
+
+  // También se puede llamar agregarTarea directo para compatibilidad
+  function agregarTarea(texto) {
+    return window.todoAPI.agregarTarea(texto);
+  }
 
   render();
 </script>
 </body>
 </html>
+Lo que cambió respecto a la versión anterior es el bloque window.todoAPI al final del script: es un objeto con cuatro funciones (obtenerTareas, agregarTarea, moverTarea, eliminarTarea) que el agente de Railway podrá usar para comunicarse con tu lista. Visualmente la página se ve exactamente igual.
+Cuando lo hayas guardado, presiona el botón para continuar con el siguiente paso: crear el bot de Telegram.
